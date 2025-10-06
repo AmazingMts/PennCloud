@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Email Viewer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2em;
+    }
+    .email-header {
+      margin-bottom: 1em;
+    }
+    .email-header h2 {
+      margin-bottom: 0.2em;
+    }
+    .email-meta {
+      font-size: 0.9em;
+      color: #555;
+    }
+    .email-body {
+      white-space: pre-wrap;
+      border-top: 1px solid #ccc;
+      margin-top: 1em;
+      padding-top: 1em;
+    }
+    a.back {
+      display: inline-block;
+      margin-top: 2em;
+      text-decoration: none;
+      color: #007BFF;
+    }
+    .email-actions {
+      margin-top: 2em;
+    }
+    .email-actions button {
+      margin-right: 1em;
+      padding: 0.5em 1em;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="email-header">
+    <h2>{{subject}}</h2>
+    <div class="email-meta">
+      <p><strong>From:</strong> {{sender}}</p>
+      <p><strong>To:</strong> {{recipient}}</p>
+      <p><strong>Date:</strong> {{timestamp}}</p>
+    </div>
+  </div>
+
+  <div class="email-body">
+    {{body}}
+  </div>
+
+  <div class="email-actions">
+    <form method="POST" action="/email/send" style="display: inline;">
+      <input type="hidden" name="actionType" value="reply">
+      <input type="hidden" name="to" value="{{sender}}">
+      <input type="hidden" name="subject" value="{{subject}}">
+      <input type="hidden" name="original" value="{{body}}">
+      <input type="hidden" name="time" value="{{timestamp}}">
+      <button type="submit">Reply</button>
+    </form>
+
+    <form method="POST" action="/email/send" style="display: inline;">
+      <input type="hidden" name="actionType" value="forward">
+      <input type="hidden" name="subject" value="{{subject}}">
+      <input type="hidden" name="original" value="{{body}}">
+      <input type="hidden" name="from" value="{{sender}}">
+      <input type="hidden" name="to" value="{{recipient}}">
+      <input type="hidden" name="time" value="{{timestamp}}">
+      <button type="submit">Forward</button>
+    </form>
+
+    <form method="POST" action="/email/delete" style="display: inline;">
+      <input type="hidden" name="emailId" value="{{emailId}}">
+      <button type="submit">Delete</button>
+    </form>
+
+  </div>
+
+  <a class="back" href="/email/inbox">← Back to Inbox</a>
+
+</body>
+</html>

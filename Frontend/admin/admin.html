@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <style>
+      .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #2c3e50;
+      padding: 0.75em 1.5em;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    .nav-left, .nav-right {
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-left a {
+      margin-right: 1.2em;
+      text-decoration: none;
+      color: white;
+      font-weight: bold;
+    }
+
+    .nav-left a:hover {
+      text-decoration: underline;
+    }
+
+    .user-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: #ecf0f1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      color: #2c3e50;
+      cursor: pointer;
+    }
+
+    .user-icon:hover {
+      background-color: #bdc3c7;
+    }
+    </style>
+    <meta charset="UTF-8" />
+    <title>Admin Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-slate-100 text-slate-800 p-8">
+      <div class="navbar">
+      <div class="nav-left">
+        <a href="/admin">Backend</a>
+        <a href="/admin/fe">Frontend</a>
+      </div>
+    </div>
+    <div id="app" class="max-w-4xl mx-auto space-y-6"></div>
+
+    <div id="spinner" class="max-w-4xl mx-auto mt-4 text-center hidden">
+      <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+      <p class="text-sm text-gray-500 mt-2">Loading...</p>
+    </div>
+
+    <div id="details" class="max-w-4xl mx-auto mt-8 space-y-4"></div>
+
+    <script>
+      const ENDPOINT = "/admin/nodes";
+      const REFRESH_MS = 3000;
+    
+      let detailsData = [];
+      let currentPage = 0;
+      const ITEMS_PER_PAGE = 10;
+    
+      async function fetchJSON(url, options = {}) {
+        const res = await fetch(url, options);
+        if (!res.ok) throw new Error(`[${res.status}] ${await res.text()}`);
+        return res.json();
+      }
+    
+      async function restartNode(host, port, isPrimary, isAlive) {
+  const node = {
+    host: host,
+    port: Number(port),
+    is_primary: isPrimary,
+    is_alive: isAlive
+  };
+
+  try {
+    const res = await fetchJSON("/admin/restart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(node)
+    });
+    alert(res.message);
+    refresh();
+  } catch (err) {
+    console.error(err);
+    alert(`Failed to restart ${host}:${port} - ${err.message}`);
+  }
+}
+
+async function endNode(host, port, isPrimary, isAlive) {
+  const node = {
+    host: host,
+    port: Number(port),
+    is_primary: isPrimary,
+    is_alive: isAlive
+  };
+
+  try {
+    const res = await fetchJSON("/admin/end", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(node)
+    });
+    alert(res.message);
+    refresh();
+  } catch (err) {
+    console.error(err);
+    alert(`Failed to end ${host}:${port} - ${err.message}`);
+  }
+}
+
+    
+      async function showDetails(host, port, isPrimary, isAlive) {
+        const addr = `${host}:${port}`;
+        const spinner = document.getElementById("spinner");
+        const details = document.getElementById("details");
+    
+        spinner.classList.remove("hidden");
+        details.classList.add("hidden");
+    
+        try {
+          const res = await fetchJSON(`/admin/details/${encodeURIComponent(addr)}?primary=${isPrimary}&alive=${isAlive}`);
+          detailsData = res.data;
+          currentPage = 0;
+          renderDetails();
+        } catch (err) {
+          console.error(err);
+          details.innerHTML = `<p class="text-red-600">Failed to load details: ${err.message}</p>`;
+        } finally {
+          spinner.classList.add("hidden");
+          details.classList.remove("hidden");
+        }
+      }
+    
+      function renderDetails() {
+        const container = document.getElementById("details");
+        if (detailsData.length === 0) {
+          container.innerHTML = "<p class='text-gray-500'>No data available.</p>";
+          return;
+        }
+    
+        const pageData = detailsData.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
+        const headers = Object.keys(pageData[0])
+          .map(key => `<th class="border px-2 py-1">${key}</th>`)
+          .join("");
+        const rows = pageData.map(row => {
+          const cols = Object.values(row)
+            .map(val =>
+              Array.isArray(val)
+                ? `<td class="border px-2 py-1">${val.join(", ")}</td>`
+                : `<td class="border px-2 py-1">${val}</td>`
+            ).join("");
+          return `<tr>${cols}</tr>`;
+        }).join("");
+    
+        container.innerHTML = `
+          <h2 class="text-xl font-semibold">Node Details (Page ${currentPage + 1} / ${Math.ceil(detailsData.length / ITEMS_PER_PAGE)})</h2>
+          <table class="min-w-full text-sm border">
+            <thead><tr>${headers}</tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="space-x-2 mt-2 flex items-center">
+            <button onclick="prevPage()" class="px-3 py-1 bg-gray-300 rounded">Prev</button>
+            <span>Page ${currentPage + 1} / ${Math.ceil(detailsData.length / ITEMS_PER_PAGE)}</span>
+            <button onclick="nextPage()" class="px-3 py-1 bg-gray-300 rounded">Next</button>
+          </div>`;
+      }
+    
+      function prevPage() {
+        if (currentPage > 0) {
+          currentPage--;
+          renderDetails();
+        }
+      }
+    
+      function nextPage() {
+        if ((currentPage + 1) * ITEMS_PER_PAGE < detailsData.length) {
+          currentPage++;
+          renderDetails();
+        }
+      }
+    
+      function render(nodes) {
+        const rows = nodes.map(n => {
+          const statusColor = n.status === "Alive" ? "text-green-600" : "text-red-600";
+          let actions = `<td class="py-2"></td>`;
+    
+          if (n.role.startsWith("KVS")) {
+            const [host, port] = n.addr.split(":");
+            const isPrimary = n.role.includes("primary");
+            const isAlive = n.status === "Alive";
+    
+            actions = `
+              <td class="py-2 space-x-2">
+                <button class="px-2 py-1 bg-green-600 text-white rounded"
+                  onclick="restartNode('${host}', ${port}, ${isPrimary}, ${isAlive})">Restart</button>
+                <button class="px-2 py-1 bg-red-600 text-white rounded"
+                  onclick="endNode('${host}', ${port}, ${isPrimary}, ${isAlive})">End</button>
+                <button class="px-2 py-1 bg-blue-600 text-white rounded"
+                  onclick="showDetails('${host}', ${port}, ${isPrimary}, ${isAlive})">Details</button>
+              </td>`;
+          }
+    
+          return `
+            <tr class="border-b last:border-none">
+              <td class="py-2 capitalize">${n.role}</td>
+              <td class="py-2">${n.addr}</td>
+              <td class="py-2 ${statusColor} font-semibold">${n.status}</td>
+              ${actions}
+            </tr>`;
+        }).join("");
+    
+        return `
+          <h1 class="text-3xl font-bold">Admin Console</h1>
+          <section class="bg-white shadow rounded-2xl p-6">
+            <h2 class="text-xl font-semibold mb-4">System Nodes</h2>
+            <table class="min-w-full text-sm">
+              <thead>
+                <tr class="border-b font-medium">
+                  <th class="text-left py-2">Role</th>
+                  <th class="text-left py-2">Address</th>
+                  <th class="text-left py-2">Status</th>
+                  <th class="text-left py-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </section>`;
+      }
+    
+      async function refresh() {
+        try {
+          const nodes = await fetchJSON(ENDPOINT);
+          document.getElementById("app").innerHTML = render(nodes);
+        } catch (err) {
+          console.error(err);
+          document.getElementById("app").innerHTML = `<p class="text-red-600">Failed to load: ${err.message}</p>`;
+        }
+      }
+    
+      document.addEventListener("DOMContentLoaded", () => {
+        refresh();
+        setInterval(refresh, REFRESH_MS);
+      });
+    </script>
+    
+  </body>
+</html>

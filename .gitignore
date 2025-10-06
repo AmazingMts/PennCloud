@@ -1,0 +1,33 @@
+# Executables (have to be excluded manually)
+Backend/POP3/pop3
+Backend/KVStorage/kvstorage
+Backend/SMTP/smtp
+Backend/Coordinator/coordinator
+Shared/testing/TIStorageService
+Frontend/admin/admin-server
+Frontend/load-balancer/load-balancer
+Frontend/frontend-server/frontend-server
+
+# Exclude data and testing files except for init files
+Data/*
+!/Data/init_mac_2
+!/Data/init_2
+**/testing/*
+
+# File endings
+*.zip
+# *.txt
+*.py
+*.o
+
+# Eclipse files
+*.launch
+*.settings
+*.project
+*.cproject
+
+# VSCode
+*.vscode
+
+# MacOS
+.DS_Store

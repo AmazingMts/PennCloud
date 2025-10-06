@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome Home</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(to right, #f5f7fa, #c3cfe2);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        color: #333;
+        margin-bottom: 2rem;
+      }
+
+      .nav-buttons {
+        display: flex;
+        gap: 1.5rem;
+      }
+
+      .nav-buttons a {
+        padding: 1rem 2rem;
+        background-color: #1a73e8;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 1.2rem;
+        transition: background-color 0.3s ease;
+      }
+
+      .nav-buttons a:hover {
+        background-color: #0c5dd6;
+      }
+      .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #2c3e50;
+      padding: 0.75em 1.5em;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    .nav-left, .nav-right {
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-left a {
+      margin-right: 1.2em;
+      text-decoration: none;
+      color: white;
+      font-weight: bold;
+    }
+
+    .nav-left a:hover {
+      text-decoration: underline;
+    }
+
+    .user-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: #ecf0f1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      color: #2c3e50;
+      cursor: pointer;
+    }
+
+    .user-icon:hover {
+      background-color: #bdc3c7;
+    }
+    </style>
+  </head>
+  <body>
+    <h1>Welcome to Your Home Page</h1>
+    <div class="nav-buttons">
+      <a href="/email/inbox">📧 Email</a>
+      <a href="/drive/view">📁 Drive</a>
+      <a href="/user/password">👤 Account</a>
+      <a href="/logout">🔓 Log Out</a>
+    </div>
+  </body>
+</html>

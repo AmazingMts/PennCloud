@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Your Drive</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f5f6f7;
+        margin: 0;
+        padding: 1rem 2rem;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #ddd;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
+      .file-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1.5rem;
+      }
+      .file-table th,
+      .file-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+      }
+      .file-table th {
+        background-color: #f0f0f0;
+      }
+      .file-table tr:hover {
+        background-color: #e8f0fe;
+      }
+      .actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+      button {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 4px;
+        background-color: #1a73e8;
+        color: white;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #0c5dd6;
+      }
+      .upload {
+        margin-top: 1rem;
+      }
+      #breadcrumb {
+        margin-top: 1rem;
+        font-size: 0.9rem;
+        color: #333;
+      }
+      #breadcrumb a {
+        color: #1a73e8;
+        text-decoration: none;
+      }
+      .spinner {
+        border: 6px solid #f3f3f3;
+        border-top: 6px solid #1a73e8;
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>My Drive</h1>
+      <div class="actions">
+        <button onclick="window.location.href='/user/login'">Log Out</button>
+        <button onclick="window.location.href='/email/inbox'">My Email</button>
+      </div>
+    </header>
+    <div
+      id="uploadOverlay"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.7);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <div class="spinner"></div>
+    </div>
+
+    <div id="breadcrumb"></div>
+
+    <div class="upload">
+      <input type="file" id="fileInput" required />
+      <button id="uploadBtn">Upload</button>
+      <progress
+        id="uploadProgress"
+        value="0"
+        max="100"
+        style="width: 100%; display: none; margin-top: 0.5rem"
+      ></progress>
+    </div>
+
+    <div style="margin-top: 1rem">
+      <button type="button" id="newFolderBtn">+ New Folder</button>
+    </div>
+
+    <table class="file-table">
+      <thead>
+        <tr>
+          <th>File Name</th>
+
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="fileBody"></tbody>
+    </table>
+
+    <script>
+      const fileInput = document.getElementById("fileInput");
+      const overlay = document.getElementById("uploadOverlay");
+      const uploadBtn = document.getElementById("uploadBtn");
+
+      fileInput.addEventListener("click", () => {
+        overlay.style.display = "flex";
+        uploadBtn.disabled = true;
+      });
+
+      fileInput.addEventListener("change", () => {
+        const file = fileInput.files[0];
+        overlay.style.display = "none";
+        uploadBtn.disabled = false;
+      });
+
+      function getFolderPrefix() {
+        const basePath = window.location.pathname;
+        if (basePath.startsWith("/drive/view/")) {
+          let folderPrefix = decodeURIComponent(
+            basePath.substring("/drive/view/".length)
+          );
+          return folderPrefix.endsWith("/") ? folderPrefix : folderPrefix + "/";
+        }
+        return "";
+      }
+
+      async function fetchAllFolders(folderPath = "") {
+        const url =
+          "/drive/view" +
+          (folderPath ? "/" + encodeURIComponent(folderPath) : "");
+        const res = await fetch(url, {
+          headers: { Accept: "application/json" },
+        });
+        const files = await res.json();
+
+        let folders = [];
+
+        for (const file of files) {
+          if (file.name.endsWith("-folder")) {
+            const fullPath = folderPath
+              ? folderPath + "/" + file.name
+              : file.name;
+            folders.push({
+              name: fullPath.replace(/-folder$/, ""),
+              path: fullPath,
+            });
+
+            const subFolders = await fetchAllFolders(fullPath);
+            folders = folders.concat(subFolders);
+          }
+        }
+
+        return folders;
+      }
+
+      async function moveItem(oldFullPath) {
+        const folderPath = decodeURIComponent(
+          window.location.pathname.substring("/drive/view".length)
+        );
+        const res = await fetch(window.location.pathname, {
+          headers: { Accept: "application/json" },
+        });
+        const files = await res.json();
+        console.log("folder path:      " + folderPath);
+
+        const itemName = oldFullPath.split("/").pop();
+        const itemFolderPath = decodeURIComponent(
+          window.location.pathname.substring("/drive/view/".length)
+        );
+
+        const rawName = itemName.replace("-folder", "");
+
+        const folderOptions = [{ name: "(root)", path: "" }]
+          .concat(await fetchAllFolders())
+          .filter((opt) => {
+            if (opt.path === itemFolderPath) return false;
+
+            if (opt.path.includes(rawName)) return false;
+
+            return true;
+          });
+
+        let optionsText = "Select target folder:\n";
+        folderOptions.forEach((opt, idx) => {
+          optionsText += `${idx}: ${opt.name}\n`;
+        });
+
+        const choice = prompt(optionsText);
+        if (choice === null) return;
+
+        const idx = parseInt(choice);
+        if (isNaN(idx) || idx < 0 || idx >= folderOptions.length) {
+          alert("Invalid choice.");
+          return;
+        }
+
+        const targetPrefix = folderOptions[idx].path;
+        const fileName = oldFullPath.split("/").pop();
+        const isFolder = oldFullPath.endsWith("-folder");
+        const newFullPath =
+          targetPrefix +
+          (targetPrefix.endsWith("/") || targetPrefix === "" ? "" : "/") +
+          fileName;
+        console.log(oldFullPath);
+        console.log(newFullPath);
+        const res2 = await fetch("/drive/rename", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bodyData: {
+              oldPath: oldFullPath,
+              newPath: newFullPath,
+            },
+          }),
+        });
+
+        if (res2.ok) {
+          alert("Move successful!");
+          loadFileList();
+        } else {
+          alert("Move failed.");
+        }
+      }
+
+      function renderBreadcrumb() {
+        const breadcrumb = document.getElementById("breadcrumb");
+        const basePath = window.location.pathname;
+
+        if (!basePath.startsWith("/drive/view/")) {
+          breadcrumb.innerHTML = `<a href="/drive/view">My Drive</a>`;
+          return;
+        }
+
+        const fullPath = decodeURIComponent(
+          basePath.substring("/drive/view/".length)
+        );
+        const parts = fullPath.split("/");
+        let html = `<a href="/drive/view">My Drive</a>`;
+        let cumulativePath = "";
+
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i];
+          if (!part) continue;
+          cumulativePath += (i > 0 ? "/" : "") + part;
+          const displayName = part.replace("-folder", "");
+          html += ` / <a href="/drive/view/${encodeURIComponent(
+            cumulativePath
+          )}">${displayName}</a>`;
+        }
+
+        breadcrumb.innerHTML = html;
+      }
+
+      async function downloadFile(fullFilename) {
+        const res = await fetch(
+          `/drive/download?filename=${encodeURIComponent(fullFilename)}`
+        );
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fullFilename.split("/").pop();
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+
+      async function deleteFile(fullFilename) {
+        const res = await fetch(
+          `/drive/delete?filename=${encodeURIComponent(fullFilename)}`,
+          {
+            method: "POST",
+          }
+        );
+        if (res.ok) {
+          alert("Deleted successfully!");
+          loadFileList();
+        } else {
+          alert("Delete failed");
+        }
+      }
+
+      async function renameItem(oldFullPath) {
+        const newName = prompt("Enter the new name:");
+        if (!newName) return;
+
+        const folderPrefix = getFolderPrefix();
+        const isFolder = oldFullPath.endsWith("-folder");
+        const newFullPath =
+          folderPrefix + newName + (isFolder ? "-folder" : "");
+        const bodyData = {
+          oldPath: oldFullPath,
+          newPath: newFullPath,
+        };
+        console.log("🚀 Rename request body:", JSON.stringify(bodyData));
+        const res = await fetch("/drive/rename", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bodyData }),
+        });
+
+        if (res.ok) {
+          alert("Rename successful!");
+          loadFileList();
+        } else {
+          alert("Rename failed.");
+        }
+      }
+
+      async function loadFileList() {
+        const folderPath = decodeURIComponent(
+          window.location.pathname.substring("/drive/view".length)
+        );
+        const res = await fetch(window.location.pathname, {
+          headers: { Accept: "application/json" },
+        });
+        const files = await res.json();
+
+        const tbody = document.getElementById("fileBody");
+        tbody.innerHTML = "";
+
+        files.forEach((file) => {
+          const fullFilename =
+            folderPath === ""
+              ? file.name
+              : folderPath + (folderPath.endsWith("/") ? "" : "/") + file.name;
+          const isFolder = file.name.endsWith("-folder");
+          const row = document.createElement("tr");
+
+          row.innerHTML = `
+      <td style="font-weight:${isFolder ? "bold" : "normal"}; color:${
+            isFolder ? "#1a73e8" : "inherit"
+          };">
+        ${
+          isFolder
+            ? `<a href="/drive/view/${encodeURIComponent(
+                fullFilename
+              )}">${file.name.replace("-folder", "")}</a>`
+            : file.name
+        }
+      </td>
+      <td>
+        ${
+          !isFolder
+            ? `<button onclick="downloadFile('${fullFilename}')">download</button>`
+            : ""
+        }
+        <button onclick="deleteFile('${fullFilename}')">delete</button>
+        <button onclick="renameItem('${fullFilename}')">rename</button>
+        <button onclick="moveItem('${fullFilename}')">move</button>
+      </td>
+    `;
+          tbody.appendChild(row);
+        });
+      }
+
+      document
+        .getElementById("uploadBtn")
+        .addEventListener("click", function () {
+          const fileInput = document.getElementById("fileInput");
+          const file = fileInput.files[0];
+          if (!file) {
+            alert("Please choose a file before uploading");
+            return;
+          }
+
+          const folderPrefix = getFolderPrefix();
+          const fullFilename = folderPrefix + file.name;
+
+          const formData = new FormData();
+          formData.append("file", file);
+
+          // Show overlay and disable upload button
+          const overlay = document.getElementById("uploadOverlay");
+          overlay.style.display = "flex";
+          const uploadBtn = document.getElementById("uploadBtn");
+          uploadBtn.disabled = true;
+
+          const progressBar = document.getElementById("uploadProgress");
+          progressBar.style.display = "block";
+          progressBar.value = 0;
+
+          const xhr = new XMLHttpRequest();
+          xhr.open(
+            "POST",
+            "/drive/upload?filename=" + encodeURIComponent(fullFilename),
+            true
+          );
+
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              progressBar.value = (e.loaded / e.total) * 100;
+            }
+          };
+
+          xhr.onload = () => {
+            overlay.style.display = "none";
+            uploadBtn.disabled = false;
+            progressBar.style.display = "none";
+
+            if (xhr.status === 200) {
+              alert("Upload successful!");
+              loadFileList();
+              fileInput.value = "";
+            } else {
+              alert("Upload failed");
+            }
+          };
+
+          xhr.onerror = () => {
+            overlay.style.display = "none";
+            uploadBtn.disabled = false;
+            progressBar.style.display = "none";
+            alert("Upload failed");
+          };
+
+          xhr.send(formData);
+        });
+
+      document
+        .getElementById("newFolderBtn")
+        .addEventListener("click", async function () {
+          const name = prompt("Enter new folder name:");
+          if (!name) return;
+          const folderName = name.trim();
+          if (!folderName) {
+            alert("Folder name cannot be empty");
+            return;
+          }
+
+          const folderPrefix = getFolderPrefix();
+          const folderFullName = folderPrefix + folderName + "-folder";
+
+          const res = await fetch(
+            "/drive/upload?filename=" + encodeURIComponent(folderFullName),
+            {
+              method: "POST",
+              body: new FormData(),
+            }
+          );
+
+          if (!res.ok) {
+            alert("Failed to create folder");
+            return;
+          }
+          loadFileList();
+        });
+      fileInput.addEventListener("click", () => {
+        overlay.style.display = "flex";
+        uploadBtn.disabled = true;
+      });
+      window.onload = () => {
+        renderBreadcrumb();
+        loadFileList();
+      };
+    </script>
+  </body>
+</html>

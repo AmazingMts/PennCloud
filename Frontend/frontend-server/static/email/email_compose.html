@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Compose Email</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      padding: 40px;
+    }
+    .compose-container {
+      background: white;
+      padding: 30px;
+      max-width: 600px;
+      margin: 0 auto;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 15px;
+    }
+    input[type="text"],
+    input[type="email"],
+    textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      resize: vertical;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 12px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+        a.back {
+      display: inline-block;
+      margin-top: 2em;
+      text-decoration: none;
+      color: #007BFF;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="compose-container">
+    <h2>Compose Email</h2>
+    <form method="POST" action="/email/send">
+      <input type="hidden" name="actionType" value="{{actionType}}" />
+
+      <label for="to">To:</label>
+      <input type="email" id="to" name="to" value="{{to}}" required />
+
+      <label for="subject">Subject:</label>
+      <input type="text" id="subject" name="subject" value="{{subject}}"/>
+
+      <label for="body">Message:</label>
+      <textarea id="body" name="body" rows="10" required>{{body}}</textarea>
+
+      <button type="submit">Send Email</button>
+    </form>
+    <a href="/email/inbox" class="back">← Back to Inbox</a>
+  </div>
+</body>
+</html>
