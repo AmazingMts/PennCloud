@@ -13,7 +13,7 @@ PennCloud is a comprehensive distributed cloud platform that combines the power 
 ### 🎯 Key Features
 
 - **📧 Complete Email System**: Full SMTP/POP3 implementation with inbox management, email composition, and forwarding
-- **💾 Distributed File Storage**: High-performance file upload/download with chunked storage for large files (up to 150MB+)
+- **💾 Distributed File Storage**: High-performance file upload/download with chunked storage for large files (up to 1TB+)
 - **🔄 Automatic Replication**: Multi-master replication across server groups with automatic failover
 - **⚡ Load Balancing**: Intelligent request distribution across frontend servers
 - **🛠️ Admin Console**: Real-time monitoring and management of the entire system
